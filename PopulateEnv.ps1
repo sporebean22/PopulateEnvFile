@@ -2,45 +2,23 @@
 param
 (
     [Parameter(Mandatory=$true)][string]$envFilePath,
-    [Parameter(Mandatory=$true)][string]$projectName
-    #[Parameter(Mandatory=$true)][string]$connectionString
+    [Parameter(Mandatory=$true)][string]$projectName,
+    [Parameter(Mandatory=$true)][string]$connectionString
 )
 
-if(($projectName != "WebEMDR-Node.js") || ($projectName != "Ecommerce-Laravel")) {
-    throw "The ProjectName $($projectName) is not supported with this Powershell Script."; 
-} if(!(Test-Path -Path $envFilePath)) {
-    throw "The FilePath $($envFilePath) is Invalid."
-}
+$currentDir = Get-Location
+Clear-Content $envFilePath
 
-[void][System.Reflection.Assembly]::LoadFrom("C:\Program Files (x86)\MySQL\MySQL Connector Net 8.0.21\Assemblies\v4.5.2\MySql.Data.dll");
-
-$myconnection = New-Object MySql.Data.MySqlClient.MySqlConnection;
-$myconnection.ConnectionString = "server=sql2.freesqldatabase.com;user id=sql2323722;password=pR7!tG9*;database=sql2323722;pooling=false";
-
-$Query="SELECT * FROM sql2323722.ENVCONFIGURATION where Project = '$($projectName)';";
-
-function PopulateConfiguration() {
-    PopulateEnv(GetEnvData)
-} if ($projectName = "WebEMDR-Node.js") { 
-    PopulateEnv(GetEnvData)
-} else {
-    throw "The ProjectName $($projectName) is not supported with this Powershell Script";
-}
-
-function PopulateEnv([System.Collections.ArrayList]$array) 
-{
-    Add-Content -Path $envFilePath -Value $array
-}
-
+[void][System.Reflection.Assembly]::LoadFrom($currentDir.Path + "\MySql.Data.dll");
 function GetEnvData() 
 {
+    $myconnection = New-Object MySql.Data.MySqlClient.MySqlConnection;
+    $myconnection.ConnectionString = $connectionString;
+    $Query="SELECT * FROM sql2323722.ENVCONFIGURATION where Project = '$($projectName)';";
+
     [System.Collections.ArrayList]$ArrayList = @()
     
-    $myconnection.Open()
-    
-    if($myconnection.State.ToString() != 'Open') {
-      throw "Invalid Connection State, Expected Connection state to be Open but 
-             found $($myconnection.State.ToString())"; }
+    $myconnection.Open()    
     
     $mycommand = New-Object MySql.Data.MySqlClient.MySqlCommand        
     $mycommand.Connection = $myconnection
@@ -54,6 +32,17 @@ function GetEnvData()
     
     $myconnection.Close()
 
-    echo $ArrayList
-    return $ArrayList
+    Clear-Content $envFilePath
+    Add-Content -Path $envFilePath -Value $ArrayList
 }
+
+if(($projectName -eq "WebEMDR-Node.js") -or ($projectName -eq "Ecommerce-Laravel")) {
+    GetEnvData
+} else {
+    throw "The ProjectName $($projectName) is not supported with this Powershell Script."; 
+} if(!(Test-Path -Path $envFilePath)) {
+    throw "The FilePath $($envFilePath) is Invalid."
+}
+
+#[Parameter(Mandatory=$true)][string]$connectionString
+#$myconnection.ConnectionString = $connectionString
